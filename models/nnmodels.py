@@ -9,7 +9,7 @@ from keras.utils import normalize, print_summary, plot_model
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.optimizers import SGD, RMSprop, Adam
 from keras.models import Sequential
-from keras.layers import Input, Dense, Conv2D, MaxPooling2D, AveragePooling2D, ZeroPadding2D, Dropout, Flatten, merge, Reshape, Activation
+from keras.layers import Input, Dense, Conv2D, MaxPooling2D, AveragePooling2D, ZeroPadding2D, Dropout, Flatten, merge, Reshape, Activation, Conv1D, AveragePooling1D
 
 
 
@@ -88,6 +88,53 @@ def DNN(num_classes):
 
     model.compile(optimizer=rmsprop, loss='categorical_crossentropy', metrics=['categorical_accuracy'])
     #print_summary(model)
+
+
+    return model
+
+
+def Cnn1D(num_classes):
+
+
+    model = Sequential()
+
+    model.add(Conv1D(filters=16, kernel_size=5, bathc_input_shape=(50, 1,  4040),\
+                        kernel_initializer='he_normal'))
+
+    model.add(Activation('relu'))
+
+
+    model.add(Conv1D(filters=32, kernel_size=5, kernel_initializer='he_normal'))
+
+    model.add(Activation('relu'))
+
+
+    model.add(Conv1D(filters=64, kernel_size=5, kernel_initializer='he_normal'))
+
+    model.add(Activation('relu'))
+
+    model.add(AveragePooling1D(pool_size=7))
+
+    model.add(Flatten())
+
+    model.add(Dense(1024, activation='relu'))
+
+    model.add(Dropout(0.5))
+
+    model.add(Dense(512, activation='relu'))
+
+    model.add(Dropout(0.5))
+
+    model.add(Dense(128, activation='relu'))
+
+    model.add(Dropout(0.5))
+
+    model.add(Dense(num_classes, activation='softmax'))
+
+    adam = Adam(lr=0.0003, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+
+    model.compile(optimizer=adam, loss='categorical_crossentropy',\
+            metrics=['categorical_accuracy'])
 
 
     return model
