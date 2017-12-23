@@ -87,8 +87,7 @@ def load_deap(num_of_subjects, num_classes):
 
 def normalize_features(data_folds, pre_normalize=False):
 
-        # Check the flag
-  # If flag is True normalize before reducing dimension
+  # If pre_normalize is True normalize before reducing dimension
   if pre_normalize == True:
     # concatenate the data folds
     X = np.concatenate(data_folds, axis=0) # shape (videos, channels, readings)
@@ -115,7 +114,7 @@ def normalize_features(data_folds, pre_normalize=False):
 
 
     # Concatenate the folds of reduced subject's data
-    X = np.concatenate(reduced_data_folds, axis=0) # shape (1280, 40, 101)
+    X = np.concatenate(reduced_data_folds, axis=0)
 
 
     # Get the shape
@@ -136,7 +135,8 @@ def normalize_features(data_folds, pre_normalize=False):
     # Reduce the features dimension
     reduced_data_folds = reduce_dim(data_folds)
 
-
+    for _ in reduced_data_folds:
+        print _.shape
     # Concatenate the folds of reduced subject's data
     X = np.concatenate(reduced_data_folds, axis=0) # shape (1280, 40, 101)
 
@@ -159,7 +159,7 @@ def normalize_features(data_folds, pre_normalize=False):
 
 
 
-# reduce vector dimention from 8064D to 101D
+# reduce vector dimention from num_readingsD to 101D
 def reduce_dim(data, num_subj_exp=True):
 
   num_subject = len(data)
@@ -168,47 +168,47 @@ def reduce_dim(data, num_subj_exp=True):
 
   def summerize(batch):
     # Mean of the batch
-  	batch_stat = batch.mean(axis=2, keepdims=True)
+    batch_stat = batch.mean(axis=-1, keepdims=True)
 
     # Median of the batch
-    batch_stat=np.append(batch_stat, np.median(batch, axis=2, keepdims=True),axis=2)
+    batch_stat=np.append(batch_stat, np.median(batch, axis=-1, keepdims=True),axis=-1)
 
     # Maximum of the batch
-    batch_stat=np.append(batch_stat, np.amax(batch, axis=2, keepdims=True),axis=2)
+    batch_stat=np.append(batch_stat, np.amax(batch, axis=-1, keepdims=True),axis=-1)
 
     # Minimum of the batch
-    batch_stat=np.append(batch_stat, np.amin(batch, axis=2, keepdims=True),axis=2)
+    batch_stat=np.append(batch_stat, np.amin(batch, axis=-1, keepdims=True),axis=-1)
 
     # Std of the batch
-    batch_stat=np.append(batch_stat, np.std(batch, axis=2, keepdims=True),axis=2)
+    batch_stat=np.append(batch_stat, np.std(batch, axis=-1, keepdims=True),axis=-1)
 
 
     # Variance of the batch
-    batch_stat=np.append(batch_stat, np.var(batch, axis=2, keepdims=True),axis=2)
+    batch_stat=np.append(batch_stat, np.var(batch, axis=-1, keepdims=True),axis=-1)
 
 
 
     # Range of the batch
     (num_videos, num_channels, num_readings) = batch.shape
-    _range = np.ptp(batch, axis=2)
+    _range = np.ptp(batch, axis=-1)
     _range = _range.reshape(num_videos, num_channels, 1)
-    batch_stat=np.append(batch_stat, _range, axis=2)
+    batch_stat=np.append(batch_stat, _range, axis=-1)
 
 
     # Skewness of the batch
-    _skew= skew(batch, axis=2)
+    _skew= skew(batch, axis=-1)
     _skew= _skew.reshape(num_videos, num_channels, 1)
-    batch_stat=np.append(batch_stat, _skew, axis=2)
+    batch_stat=np.append(batch_stat, _skew, axis=-1)
 
 
 
     # Kurtosis of the batch
-    _kurtosis= kurtosis(batch, axis=2)
+    _kurtosis= kurtosis(batch, axis=-1)
     _kurtosis= _kurtosis.reshape(num_videos, num_channels, 1)
-    batch_stat=np.append(batch_stat, _kurtosis, axis=2)
+    batch_stat=np.append(batch_stat, _kurtosis, axis=-1)
 
     return batch_stat
-  
+
 
 
   # iterate on the list of subject data
@@ -222,7 +222,7 @@ def reduce_dim(data, num_subj_exp=True):
     for j in range(10):
         # Last batch
         if j==9:
-        	batch = subj_data[:,:,j*window_size:]
+            batch = subj_data[:,:,j*window_size:]
             batch_stat = summerize(batch)
             batch_list.append(batch_stat)
             # Other batches
@@ -234,13 +234,13 @@ def reduce_dim(data, num_subj_exp=True):
 
         # Append subject summaries to batch list
         batch_list.append(summerize(subj_data))
-        subject_stat = np.concatenate(batch_list, axis=2)
+        subject_stat = np.concatenate(batch_list, axis=-1)
 
         # Check if we should add experiment and subject number
         if num_subj_exp==True:
         	# Create matrix of subject number and add it to summary
         	subject_num_mat = np.ones((num_videos, num_channels, 1)) * (i + 1 ) # i + 1 = subject number
-        	subject_stat = np.append(subject_stat, subject_num_mat, axis=2)
+        	subject_stat = np.append(subject_stat, subject_num_mat, axis=-1)
 
         	# Create matrix of experiments number and add it to summary
         	ones_mat = np.ones((num_videos, num_channels))
@@ -249,7 +249,7 @@ def reduce_dim(data, num_subj_exp=True):
         	exp_mat = exp_mat.reshape((num_videos, num_channels, 1))
 
         	# Append number of experiments to subject summary
-        	subject_stat = np.append(subject_stat, exp_mat, axis=2)
+        	subject_stat = np.append(subject_stat, exp_mat, axis=-1)
 
         # Add subject i to reduced_data list
         reduced_data.append(subject_stat)
