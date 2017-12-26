@@ -26,12 +26,12 @@ def CNN(num_classes, emotion='valence', input_shape=None):
 
     model = Sequential()
 
-    model.add(Conv2D(128,  kernel_size=(3,3), padding='valid', input_shape=input_shape,
+    model.add(Conv2D(128,  kernel_size=(3,3), padding='valid', input_shape=(1,40,29),
                      data_format='channels_first'))
 
     model.add(Activation(act_func))
 
-    model.add(Conv2D(256,  kernel_size=(3,3)))
+    model.add(Conv2D(128,  kernel_size=(3,3)))
 
     model.add(Activation('tanh'))
 
