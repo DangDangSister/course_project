@@ -85,19 +85,19 @@ def load_deap(num_of_subjects, num_classes):
 
 
 
-def normalize_features(data_folds, flag=False):
+def normalize_features(data_folds, pre_norm=False):
 
-        # Check the flag
-  # If flag is True normalize before reducing dimension
-  if flag == True:
+        # Check the pre_norm
+  # If pre_norm is True normalize before reducing dimension
+  if pre_norm == True:
     # concatenate the data folds
-    X = np.concatenate(data_folds, axis=0) # shape (1280, 40, 8064)
+    X = np.concatenate(data_folds, axis=0)
 
     # Get the shape
     axes_0, axes_1, axes_2 = X.shape
 
     # Reshape the data
-    X = X.reshape(axes_0*axes_1,axes_2 ) # shape (51200, 322560)
+    X = X.reshape(axes_0*axes_1,axes_2 )
 
     # Mapping features to zero mean and unit variance
     X = scale(X)
@@ -114,7 +114,7 @@ def normalize_features(data_folds, flag=False):
 
 
     # Concatenate the folds of reduced subject's data
-    X = np.concatenate(reduced_data_folds, axis=0) # shape (1280, 40, 101)
+    X = np.concatenate(reduced_data_folds, axis=0)
 
 
     # Get the shape
@@ -125,6 +125,8 @@ def normalize_features(data_folds, flag=False):
 
     # Mapping features to zero mean and unit variance
     X = scale(X)
+
+    X = X.reshape(axes_0, axes_1, axes_2)
 
     # Split data into 32 folds
     reduced_data_folds = np.split(X, 32, axis=0)
@@ -137,7 +139,7 @@ def normalize_features(data_folds, flag=False):
 
 
                 # Concatenate the folds of reduced subject's data
-                X = np.concatenate(reduced_data_folds, axis=0) # shape (1280, 40, 101)
+                X = np.concatenate(reduced_data_folds, axis=0)
 
 
                 # Get the shape
@@ -149,6 +151,8 @@ def normalize_features(data_folds, flag=False):
                 # Mapping features to zero mean and unit variance
                 X = scale(X)
 
+                X = X.reshape(axes_0, axes_1, axes_2)
+
                 # Split data into 32 folds
                 reduced_data_folds = np.split(X, 32, axis=0)
 
@@ -158,53 +162,56 @@ def normalize_features(data_folds, flag=False):
 
 
 
-# reduce vector dimention from 8064D to 4040D
 def reduce_dim(data):
 
   num_subject = len(data)
+
+  exp, ch, r = data[0].shape
+  windows = int(r/10)
 
 
 
   def summerize(batch):
 
-    # Mean of the batch
-        batch_stat = batch.mean(axis=2, keepdims=True)
+        # Mean of the batch
+        batch_stat = batch.mean(axis=-1, keepdims=True)
 
         # Median of the batch
-        batch_stat=np.append(batch_stat, np.median(batch, axis=2, keepdims=True),axis=2)
+        batch_stat=np.append(batch_stat, np.median(batch, axis=-1, keepdims=True),axis=-1)
 
         # Maximum of the batch
-        batch_stat=np.append(batch_stat, np.amax(batch, axis=2, keepdims=True),axis=2)
+        batch_stat=np.append(batch_stat, np.amax(batch, axis=-1, keepdims=True),axis=-1)
 
         # Minimum of the batch
-        batch_stat=np.append(batch_stat, np.amin(batch, axis=2, keepdims=True),axis=2)
+        batch_stat=np.append(batch_stat, np.amin(batch, axis=-1, keepdims=True),axis=-1)
 
         # Std of the batch
-        batch_stat=np.append(batch_stat, np.std(batch, axis=2, keepdims=True),axis=2)
+        batch_stat=np.append(batch_stat, np.std(batch, axis=-1, keepdims=True),axis=-1)
 
 
         # Variance of the batch
-        batch_stat=np.append(batch_stat, np.var(batch, axis=2, keepdims=True),axis=2)
+        batch_stat=np.append(batch_stat, np.var(batch, axis=-1, keepdims=True),axis=-1)
 
 
 
         # Range of the batch
-        _range = np.ptp(batch, axis=2)
-        _range = _range.reshape(40,40,1)
-        batch_stat=np.append(batch_stat, _range, axis=2)
+
+        _range = np.ptp(batch, axis=-1)
+        _range = _range.reshape(exp,ch,1)
+        batch_stat=np.append(batch_stat, _range, axis=-1)
 
 
         # Skewness of the batch
-        _skew= skew(batch, axis=2)
-        _skew= _skew.reshape(40,40,1)
-        batch_stat=np.append(batch_stat, _skew, axis=2)
+        _skew= skew(batch, axis=-1)
+        _skew= _skew.reshape(exp,ch,1)
+        batch_stat=np.append(batch_stat, _skew, axis=-1)
 
 
 
         # Kurtosis of the batch
-        _kurtosis= kurtosis(batch, axis=2)
-        _kurtosis= _kurtosis.reshape(40,40,1)
-        batch_stat=np.append(batch_stat, _kurtosis, axis=2)
+        _kurtosis= kurtosis(batch, axis=-1)
+        _kurtosis= _kurtosis.reshape(exp,ch,1)
+        batch_stat=np.append(batch_stat, _kurtosis, axis=-1)
 
         return batch_stat
   # iterate on the list of subject data
@@ -216,30 +223,30 @@ def reduce_dim(data):
         for j in range(10):
           # Last batch
             if j==9:
-                  batch = subj_data[:,:,j*806:]
+                  batch = subj_data[:,:,j*windows:]
                   batch_stat = summerize(batch)
                   batch_list.append(batch_stat)
             # Other batches
             else:
-                  batch = subj_data[:,:,j*806:(j+1)*806]
+                  batch = subj_data[:,:,j*windows:(j+1)*windows]
                   batch_stat = summerize(batch)
                   batch_list.append(batch_stat)
         # Append subject summaries to batch list
         batch_list.append(summerize(subj_data))
-        subject_stat = np.concatenate(batch_list, axis=2)
+        subject_stat = np.concatenate(batch_list, axis=-1)
 
         # Create matrix of subject number and add it to summary
-        subject_num_mat = np.ones((40,40,1)) * (i + 1 ) # i + 1 = subject number
-        subject_stat = np.append(subject_stat, subject_num_mat, axis=2)
+        subject_num_mat = np.ones((exp,ch,1)) * (i + 1 ) # i + 1 = subject number
+        subject_stat = np.append(subject_stat, subject_num_mat, axis=-1)
 
         # Create matrix of experiments number and add it to summary
-        ones_mat = np.ones((40,40))
-        exp_array = np.arange(1,41)
+        ones_mat = np.ones((exp,ch))
+        exp_array = np.arange(1,exp+1)
         exp_mat = ones_mat * exp_array[:,np.newaxis]
-        exp_mat = exp_mat.reshape(40,40,1)
+        exp_mat = exp_mat.reshape(exp,ch,1)
 
         # Append number of experiments to subject summary
-        subject_stat = np.append(subject_stat, exp_mat, axis=2)
+        subject_stat = np.append(subject_stat, exp_mat, axis=-1)
 
         # Add subject i to reduced_data list
         reduced_data.append(subject_stat)
