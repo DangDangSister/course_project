@@ -167,7 +167,7 @@ def reduce_dim(data):
   num_subject = len(data)
 
   exp, ch, r = data[0].shape
-  windows = int(r/10)
+  windows = int(r/2)
 
 
 
@@ -220,9 +220,9 @@ def reduce_dim(data):
         # Empty list to hold each batch statistical summary
         batch_list = []
         subj_data = data[i]
-        for j in range(10):
+        for j in range(2):
           # Last batch
-            if j==9:
+            if j==1:
                   batch = subj_data[:,:,j*windows:]
                   batch_stat = summerize(batch)
                   batch_list.append(batch_stat)
