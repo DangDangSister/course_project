@@ -1,1 +1,1 @@
-# ai-course-project
+# Emotion Classification on DEAP dataset
